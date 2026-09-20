@@ -6,7 +6,6 @@ use App\Models\AttendanceBreak;
 use App\Models\AttendanceRecord;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class AttendanceRecordSeeder extends Seeder
@@ -73,7 +72,7 @@ class AttendanceRecordSeeder extends Seeder
      * 指定した月の平日を先頭から指定件数だけ取得する
      * ある月の1日から末日（または昨日、早い方）までを1日ずつ確認し、
      * 土日を除いた平日を、指定件数集まるまで拾い集める。
-     * 
+     *
      * @return array<int, Carbon>
      */
     private function weekdaysOfMonth(Carbon $month, int $count): array
@@ -83,7 +82,7 @@ class AttendanceRecordSeeder extends Seeder
         $end = $month->copy()->endOfMonth()->min(Carbon::yesterday());
 
         while ($cursor->lte($end) && count($days) < $count) {
-            if (!$cursor->isWeekend()) {
+            if (! $cursor->isWeekend()) {
                 $days[] = $cursor->copy();
             }
             $cursor->addDay();
@@ -95,7 +94,7 @@ class AttendanceRecordSeeder extends Seeder
     /**
      * 指定したユーザー・日付・出退勤時刻で勤怠レコードを作成（既にあれば上書き）し、
      * 紐づく休憩レコードは一旦全部削除してから、引数で渡された休憩時間の分だけ作り直す。
-     * 
+     *
      * @param  array<int, array{0: string, 1: string}>  $breaks
      */
     private function createRecord(User $user, Carbon $date, string $clockIn, string $clockOut, array $breaks): void

@@ -53,7 +53,7 @@ class AttendanceRecord extends Model
         return $this->hasMany(Application::class);
     }
 
-    /** 
+    /**
      * 承認待ちの修正申請（存在する場合のみ）
      */
     public function pendingApplication(): ?Application
@@ -67,7 +67,7 @@ class AttendanceRecord extends Model
     public function getTotalBreakSecondsAttribute(): int
     {
         return $this->breaks
-            ->filter(fn(AttendanceBreak $break) => $break->break_in && $break->break_out)
+            ->filter(fn (AttendanceBreak $break) => $break->break_in && $break->break_out)
             ->sum(function (AttendanceBreak $break) {
                 return Carbon::parse($break->break_out)->diffInSeconds(Carbon::parse($break->break_in));
             });
@@ -92,7 +92,7 @@ class AttendanceRecord extends Model
     public function getTotalTimeAttribute(): ?string
     {
         // 出勤していない場合（退勤していない場合含む）はnull
-        if (!$this->clock_in || !$this->clock_out) {
+        if (! $this->clock_in || ! $this->clock_out) {
             return null;
         }
 

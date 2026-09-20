@@ -22,7 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'admin_status'
+        'admin_status',
     ];
 
     /**
@@ -74,7 +74,7 @@ class User extends Authenticatable
             ->first();
 
         // 勤怠レコードがない場合（出勤打刻が空白の場合含む）
-        if (!$today || !$today->clock_in) {
+        if (! $today || ! $today->clock_in) {
             return '勤務外';
         }
 
