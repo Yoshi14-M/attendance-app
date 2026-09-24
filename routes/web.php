@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\AttendanceRecordController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,4 +36,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // 管理者ログアウト [FN017]
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| 一般ユーザー用ルート
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'not.admin'])->group(function () {
+    // 打刻機能
+    Route::get('/attendance', [AttendanceRecordController::class, 'create']);
+    Route::post('/attendance', [AttendanceRecordController::class, 'store']);
 });

@@ -14,7 +14,7 @@ class AttendanceBreak extends Model
      * 一括代入の許可項目（ホワイトリスト）
      */
     protected $fillable = [
-        'attendance_id',
+        'attendance_record_id',
         'break_in',
         'break_out',
     ];
