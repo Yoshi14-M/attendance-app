@@ -47,4 +47,8 @@ Route::middleware(['auth', 'not.admin'])->group(function () {
     // 打刻機能
     Route::get('/attendance', [AttendanceRecordController::class, 'create']);
     Route::post('/attendance', [AttendanceRecordController::class, 'store']);
+    // 勤怠一覧表示
+    Route::get('/attendance/list', [AttendanceRecordController::class, 'index']);
+    // 勤怠詳細表示
+    Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
 });
