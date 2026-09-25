@@ -52,3 +52,13 @@ Route::middleware(['auth', 'not.admin'])->group(function () {
     // 勤怠詳細表示
     Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
 });
+
+/*
+|--------------------------------------------------------------------------
+| 一般ユーザー・管理者の双方からアクセスされる共通パス
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')->group(function () {
+    // 勤怠詳細の修正・修正申請（一般ユーザーは申請、管理者は直接修正）
+    Route::post('/attendance/{id}', [AttendanceRecordController::class, 'update']);
+});

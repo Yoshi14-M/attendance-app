@@ -66,4 +66,62 @@ class AttendanceRecordTest extends TestCase
 
         $this->assertEquals('退勤済', $user->fresh()->attendance_status);
     }
+
+    /** @test */
+    public function 修正申請の備考欄が空白の場合はエラーになる(): void
+    {
+        $user = User::factory()->create();
+        $record = AttendanceRecord::factory()->for($user)->create([
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        $response = $this->actingAs($user)->post("/attendance/{$record->id}", [
+            'new_clock_in' => '09:00',
+            'new_clock_out' => '18:00',
+            'comment' => '',
+        ]);
+
+        $response->assertSessionHasErrors(['comment' => '備考を記入してください']);
+    }
+
+    /** @test */
+
+    public function 出勤打刻よりも前の時刻での退勤打刻は拒否される(): void
+    {
+        $user = User::factory()->create();
+        $record = AttendanceRecord::factory()->for($user)->create([
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        $response = $this->actingAs($user)->post("/attendance/{$record->id}", [
+            'new_clock_in' => '19:00',
+            'new_clock_out' => '18:00',
+            'comment' => '修正します',
+        ]);
+
+        $response->assertSessionHasErrors('new_clock_in');
+    }
+
+    /** @test */
+    public function 一般ユーザー修正申請が「承認待ち」になる(): void
+    {
+        $user = User::factory()->create();
+        $record = AttendanceRecord::factory()->for($user)->create([
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+        ]);
+
+        $this->actingAs($user)->post("/attendance/{$record->id}", [
+            'new_clock_in' => '09:00',
+            'new_clock_out' => '19:00',
+            'comment' => '残業のため修正します',
+        ]);
+
+        $this->assertDatabaseHas('applications', [
+            'attendance_record_id' => $record->id,
+            'approval_status' => '承認待ち',
+        ]);
+    }
 }

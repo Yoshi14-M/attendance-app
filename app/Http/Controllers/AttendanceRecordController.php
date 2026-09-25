@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\UpdateAttendanceRequest;
+use App\Models\Application;
 use App\Models\AttendanceBreak;
 use App\Models\AttendanceRecord;
+use App\Models\ProposalBreak;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -134,10 +137,54 @@ class AttendanceRecordController extends Controller
 
     /**
      * Update the specified resource in storage.
+     * 勤怠修正（一般ユーザーは修正申請、管理者は直接修正）
      */
-    public function update(Request $request, AttendanceRecord $attendanceRecord)
+    public function update(UpdateAttendanceRequest $request, int $id)
     {
-        //
+        $attendanceRecord = AttendanceRecord::findOrFail($id);
+        $user = Auth::user();
+
+        if ($user->admin_status) {
+            $attendanceRecord->update([
+                'clock_in' => $request->input('new_clock_in'),
+                'clock_out' => $request->input('new_clock_out'),
+                'comment' => $request->input('comment'),
+            ]);
+
+            $this->syncBreaks($attendanceRecord, $request->input('new_break_in', []), $request->input('new_break_out', []));
+
+            return redirect('/admin/attendance/list');
+        }
+
+        abort_if($attendanceRecord->user_id !== $user->id, 403);
+        abort_if($attendanceRecord->pendingApplication() !== null, 403, '承認待ちのため修正はできません。');
+
+        $application = Application::create([
+            'user_id' => $user->id,
+            'attendance_record_id' => $attendanceRecord->id,
+            'new_date' => $attendanceRecord->date,
+            'new_clock_in' => $request->input('new_clock_in'),
+            'new_clock_out' => $request->input('new_clock_out'),
+            'comment' => $request->input('comment'),
+            'application_date' => Carbon::now(),
+        ]);
+
+        collect($request->input('new_break_in', []))
+            ->each(function (?string $breakIn, int $index) use ($application, $request) {
+                $breakOut = $request->input('new_break_out')[$index] ?? null;
+
+                if (!$breakIn && !$breakOut) {
+                    return;
+                }
+
+                ProposalBreak::create([
+                    'application_id' => $application->id,
+                    'break_in' => $breakIn,
+                    'break_out' => $breakOut,
+                ]);
+            });
+
+        return redirect('/attendance/list');
     }
 
     /**
@@ -181,5 +228,30 @@ class AttendanceRecordController extends Controller
             'comment' => $attendanceRecord->comment,
             'application' => $attendanceRecord->pendingApplication(),
         ];
+    }
+
+    /**
+     * 送信された休憩の入力内容で、勤怠に紐づく休憩レコードを作り直す
+     *
+     * @param  array<int, string|null>  $breakIns
+     * @param  array<int, string|null>  $breakOuts
+     */
+    private function syncBreaks(AttendanceRecord $attendanceRecord, array $breakIns, array $breakOuts): void
+    {
+        $attendanceRecord->breaks()->delete();
+
+        collect($breakIns)->each(function (?string $breakIn, int $index) use ($attendanceRecord, $breakOuts) {
+            $breakOut = $breakOuts[$index] ?? null;
+
+            if (!$breakIn && !$breakOut) {
+                return;
+            }
+
+            AttendanceBreak::create([
+                'attendance_record_id' => $attendanceRecord->id,
+                'break_in' => $breakIn,
+                'break_out' => $breakOut,
+            ]);
+        });
     }
 }
