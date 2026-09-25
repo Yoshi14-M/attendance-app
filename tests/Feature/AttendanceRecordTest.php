@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\AttendanceRecord;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
@@ -86,7 +85,6 @@ class AttendanceRecordTest extends TestCase
     }
 
     /** @test */
-
     public function 出勤打刻よりも前の時刻での退勤打刻は拒否される(): void
     {
         $user = User::factory()->create();

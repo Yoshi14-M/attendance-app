@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Carbon\Carbon;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -19,7 +20,7 @@ class UpdateAttendanceRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -33,6 +34,7 @@ class UpdateAttendanceRequest extends FormRequest
             'comment' => ['required', 'string', 'max:255'],
         ];
     }
+
     public function messages(): array
     {
         return [
@@ -59,7 +61,7 @@ class UpdateAttendanceRequest extends FormRequest
             foreach ($breakIns as $index => $breakIn) {
                 $breakOut = $breakOuts[$index] ?? null;
 
-                if (!$breakIn && !$breakOut) {
+                if (! $breakIn && ! $breakOut) {
                     continue;
                 }
 
