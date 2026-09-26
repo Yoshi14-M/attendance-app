@@ -20,14 +20,14 @@ class AttendanceRecordController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $date = Carbon::parse($request->query('date', Carbon::now()->format('Y-m')).'-01');
+        $date = Carbon::parse($request->query('date', Carbon::now()->format('Y-m')) . '-01');
 
         $records = $user->attendanceRecords()
             ->with('breaks')
             ->whereYear('date', $date->year)
             ->whereMonth('date', $date->month)
             ->get()
-            ->keyBy(fn (AttendanceRecord $record) => $record->date->format('Y-m-d'));
+            ->keyBy(fn(AttendanceRecord $record) => $record->date->format('Y-m-d'));
 
         $formattedAttendanceRecords = collect(range(1, $date->daysInMonth))
             ->map(function (int $day) use ($date, $records) {
@@ -74,7 +74,7 @@ class AttendanceRecordController extends Controller
             ->whereDate('date', $today)
             ->first();
 
-        if (! $attendanceRecord) {
+        if (!$attendanceRecord) {
             $attendanceRecord = AttendanceRecord::create([
                 'user_id' => $user->id,
                 'date' => $today,
@@ -83,13 +83,13 @@ class AttendanceRecordController extends Controller
 
         switch ($request->input('action')) {
             case 'clock_in':
-                if (! $attendanceRecord->clock_in) {
+                if (!$attendanceRecord->clock_in) {
                     $attendanceRecord->update(['clock_in' => $now]);
                 }
                 break;
 
             case 'clock_out':
-                if ($attendanceRecord->clock_in && ! $attendanceRecord->clock_out) {
+                if ($attendanceRecord->clock_in && !$attendanceRecord->clock_out) {
                     $attendanceRecord->update(['clock_out' => $now]);
                 }
                 break;
@@ -113,15 +113,27 @@ class AttendanceRecordController extends Controller
     /**
      * Display the specified resource.
      * 勤怠詳細画面の表示
+     * （管理者かどうかで、表示する内容とビューを分岐）
      */
     public function show(int $id)
     {
+        $user = Auth::user();
+
+        if ($user->admin_status) {
+            $attendanceRecord = AttendanceRecord::with('user', 'breaks')->findOrFail($id);
+
+            return view('admin.admin-detail', [
+                'user' => $attendanceRecord->user,
+                'attendanceRecord' => $this->formatRecordForAdminDetail($attendanceRecord),
+            ]);
+        }
+
         $attendanceRecord = AttendanceRecord::with('breaks', 'applications')
-            ->where('user_id', Auth::id())
+            ->where('user_id', $user->id)
             ->findOrFail($id);
 
         return view('user.user-detail', [
-            'user' => Auth::user(),
+            'user' => $user,
             'data' => $this->formatRecordForDetail($attendanceRecord),
         ]);
 
@@ -173,7 +185,7 @@ class AttendanceRecordController extends Controller
             ->each(function (?string $breakIn, int $index) use ($application, $request) {
                 $breakOut = $request->input('new_break_out')[$index] ?? null;
 
-                if (! $breakIn && ! $breakOut) {
+                if (!$breakIn && !$breakOut) {
                     return;
                 }
 
@@ -221,7 +233,7 @@ class AttendanceRecordController extends Controller
             'date' => $attendanceRecord->date->format('n月j日'),
             'clock_in' => $attendanceRecord->clock_in ? Carbon::parse($attendanceRecord->clock_in)->format('H:i') : '',
             'clock_out' => $attendanceRecord->clock_out ? Carbon::parse($attendanceRecord->clock_out)->format('H:i') : '',
-            'breaks' => $attendanceRecord->breaks->map(fn (AttendanceBreak $break) => [
+            'breaks' => $attendanceRecord->breaks->map(fn(AttendanceBreak $break) => [
                 'break_in' => $break->break_in ? Carbon::parse($break->break_in)->format('H:i') : '',
                 'break_out' => $break->break_out ? Carbon::parse($break->break_out)->format('H:i') : '',
             ])->all(),
@@ -243,7 +255,7 @@ class AttendanceRecordController extends Controller
         collect($breakIns)->each(function (?string $breakIn, int $index) use ($attendanceRecord, $breakOuts) {
             $breakOut = $breakOuts[$index] ?? null;
 
-            if (! $breakIn && ! $breakOut) {
+            if (!$breakIn && !$breakOut) {
                 return;
             }
 
@@ -253,5 +265,21 @@ class AttendanceRecordController extends Controller
                 'break_out' => $breakOut,
             ]);
         });
+    }
+
+    private function formatRecordForAdminDetail(AttendanceRecord $attendanceRecord): array
+    {
+        return [
+            'id' => $attendanceRecord->id,
+            'year' => $attendanceRecord->date->format('Y年'),
+            'date' => $attendanceRecord->date->format('n月j日'),
+            'clock_in' => $attendanceRecord->clock_in ? Carbon::parse($attendanceRecord->clock_in)->format('H:i') : '',
+            'clock_out' => $attendanceRecord->clock_out ? Carbon::parse($attendanceRecord->clock_out)->format('H:i') : '',
+            'breaks' => $attendanceRecord->breaks->map(fn(AttendanceBreak $break) => [
+                'break_in' => $break->break_in ? Carbon::parse($break->break_in)->format('H:i') : '',
+                'break_out' => $break->break_out ? Carbon::parse($break->break_out)->format('H:i') : '',
+            ])->all(),
+            'comment' => $attendanceRecord->comment,
+        ];
     }
 }

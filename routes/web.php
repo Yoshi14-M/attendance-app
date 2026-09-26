@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminAttendanceController;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\AttendanceRecordController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::middleware(['auth', 'admin'])->group(function () {
         // 管理者ログアウト [FN017]
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+        // 勤怠一覧表示
+        Route::get('/attendance/list', [AdminAttendanceController::class, 'index']);
     });
 });
 
@@ -49,8 +52,6 @@ Route::middleware(['auth', 'not.admin'])->group(function () {
     Route::post('/attendance', [AttendanceRecordController::class, 'store']);
     // 勤怠一覧表示
     Route::get('/attendance/list', [AttendanceRecordController::class, 'index']);
-    // 勤怠詳細表示
-    Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
 });
 
 /*
@@ -59,6 +60,8 @@ Route::middleware(['auth', 'not.admin'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
+    // 勤怠詳細表示(一般ユーザーは自分の勤怠のみ、管理者は全ユーザーの勤怠を閲覧可)
+    Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
     // 勤怠詳細の修正・修正申請（一般ユーザーは申請、管理者は直接修正）
     Route::post('/attendance/{id}', [AttendanceRecordController::class, 'update']);
 });
