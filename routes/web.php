@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminAttendanceController;
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\AttendanceRecordController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +39,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
         // 勤怠一覧表示
         Route::get('/attendance/list', [AdminAttendanceController::class, 'index']);
+        // スタッフ一覧表示
+        Route::get('/staff/list', [StaffController::class, 'index']);
+        // 月次表示
+        Route::get('/attendance/staff/{id}', [StaffController::class, 'show']);
     });
 });
 
