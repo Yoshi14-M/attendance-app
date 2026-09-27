@@ -26,14 +26,14 @@ class StaffController extends Controller
     public function show(Request $request, int $id)
     {
         $user = User::findOrFail($id);
-        $date = Carbon::parse($request->query('date', Carbon::now()->format('Y-m')) . '-01');
+        $date = Carbon::parse($request->query('date', Carbon::now()->format('Y-m')).'-01');
 
         $records = $user->attendanceRecords()
             ->with('breaks')
             ->whereYear('date', $date->year)
             ->whereMonth('date', $date->month)
             ->get()
-            ->keyBy(fn(AttendanceRecord $record) => $record->date->format('Y-m-d'));
+            ->keyBy(fn (AttendanceRecord $record) => $record->date->format('Y-m-d'));
 
         $formattedAttendanceRecords = collect(range(1, $date->daysInMonth))
             ->map(function (int $day) use ($date, $records) {

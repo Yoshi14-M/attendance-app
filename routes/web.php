@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminAttendanceController;
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\StaffController;
+use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AttendanceRecordController;
 use Illuminate\Support\Facades\Route;
 
@@ -57,6 +58,9 @@ Route::middleware(['auth', 'not.admin'])->group(function () {
     Route::post('/attendance', [AttendanceRecordController::class, 'store']);
     // 勤怠一覧表示
     Route::get('/attendance/list', [AttendanceRecordController::class, 'index']);
+
+    // 申請一覧「詳細」リンクの橋渡し（画面設計にはない補助ルート）
+    Route::get('/application/{id}', [ApplicationController::class, 'redirectToAttendanceDetail']);
 });
 
 /*
@@ -69,4 +73,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
     // 勤怠詳細の修正・修正申請（一般ユーザーは申請、管理者は直接修正）
     Route::post('/attendance/{id}', [AttendanceRecordController::class, 'update']);
+
+    // 申請一覧（同一パスをコントローラー内で admin_status により出し分け）
+    Route::get('/stamp_correction_request/list', [ApplicationController::class, 'index']);
+    // 修正申請承認画面（管理者のみ）
+    Route::middleware('admin')->group(function () {
+        Route::get('/stamp_correction_request/approve/{id}', [ApplicationController::class, 'show']);
+        Route::post('/stamp_correction_request/approve/{id}', [ApplicationController::class, 'approve']);
+    });
 });
