@@ -1,66 +1,112 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# coachtech 勤怠管理アプリ
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 概要
 
-## About Laravel
+一般ユーザーが出勤・休憩・退勤の打刻、勤怠の確認、勤怠修正申請を行い、管理者ユーザーが全ユーザーの勤怠確認・スタッフ管理・修正申請の承認を行う、勤怠管理を目的とした Web アプリケーションです。
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 使用技術
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP 8.5
+- Laravel 10.50
+- MySQL 8.x
+- Laravel Sail（Docker）
+- Laravel Fortify（認証）
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 環境構築手順
 
-## Learning Laravel
+1. リポジトリを取得する
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+   git clone <このリポジトリのURL>
+   cd <プロジェクトディレクトリ>
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+2. `.env.example` を `.env` にコピーする
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+   cp .env.example .env
+```
 
-## Laravel Sponsors
+3. Sail を起動し、依存関係をインストールする
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+   ./vendor/bin/sail up -d
+   ./vendor/bin/sail composer install
+   ./vendor/bin/sail artisan key:generate
+```
 
-### Premium Partners
+4. マイグレーション・シーディングを実行する
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```bash
+   ./vendor/bin/sail artisan migrate --seed
+```
 
-## Contributing
+5. フロントエンドをビルドする
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+   ./vendor/bin/sail npm install
+   ./vendor/bin/sail npm run dev
+```
 
-## Code of Conduct
+6. アクセスする
+    - アプリ: http://localhost
+    - phpMyAdmin: http://localhost:8080
+    - Mailpit: http://localhost:8025
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## ログイン情報（シーディングで自動作成）
 
-## Security Vulnerabilities
+| 役割           | メールアドレス    | パスワード | 備考                |
+| -------------- | ----------------- | ---------- | ------------------- |
+| 一般ユーザー   | user1@example.com | password   | メール認証済み      |
+| 一般ユーザー   | user2@example.com | password   | メール認証済み      |
+| 管理者ユーザー | user3@example.com | password   | admin_status = true |
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- 一般ユーザーログイン: http://localhost/login
+- 管理者ログイン: http://localhost/admin/login
 
-## License
+## 主な機能
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### 一般ユーザー
+
+- 会員登録・ログイン・ログアウト
+- 出勤・休憩・退勤の打刻（`/attendance`）
+- 勤怠一覧の確認（`/attendance/list`）
+- 勤怠詳細の確認・修正申請（`/attendance/{id}`）
+- 修正申請一覧の確認（`/stamp_correction_request/list`）
+
+### 管理者ユーザー
+
+- 管理者ログイン・ログアウト（`/admin/login`）
+- 全ユーザーの当日勤怠一覧（`/admin/attendance/list`）
+- 勤怠詳細の確認・直接修正（`/attendance/{id}`）
+- スタッフ一覧（`/admin/staff/list`）
+- スタッフ別の月次勤怠一覧（`/admin/attendance/staff/{id}`）
+- 修正申請一覧の確認・承認（`/stamp_correction_request/list`, `/stamp_correction_request/approve/{id}`）
+
+## テストの実行
+
+```bash
+./vendor/bin/sail artisan test
+```
+
+## コード整形（Laravel Pint）
+
+```bash
+./vendor/bin/sail pint
+```
+
+## ディレクトリ構成の補足
+
+- `app/Http/Controllers/AttendanceRecordController.php` : 打刻・勤怠一覧・勤怠詳細表示・修正（申請/直接）を担当。一般ユーザー・管理者共通で使用
+- `app/Http/Controllers/ApplicationController.php` : 修正申請の一覧・承認を担当。一般ユーザー・管理者共通で使用
+- `app/Http/Controllers/Admin/AdminAuthController.php` : 管理者ログイン・ログアウト
+- `app/Http/Controllers/Admin/AdminAttendanceController.php` : 管理者向け・全ユーザーの当日勤怠一覧
+- `app/Http/Controllers/Admin/StaffController.php` : スタッフ一覧・スタッフ別月次勤怠一覧
+- `app/Actions/Fortify/CreateNewUser.php` : 会員登録処理（`RegisterRequest` のルールを使用）
+- `app/Providers/FortifyServiceProvider.php` : ログイン処理のカスタマイズ（一般ユーザーのみ認証）
+- `lang/ja/auth.php`, `lang/ja/validation.php` : 日本語バリデーション・認証メッセージ
+
+## 実装状況（2026年時点）
+
+- 基本機能（会員登録・ログイン・打刻・勤怠一覧/詳細・修正申請・管理者機能一式）: 実装済み・テスト済み
+- 応用機能（メール認証・マイ勤怠レポート・公開API・CSV出力）: 今後実装予定
