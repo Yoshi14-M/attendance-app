@@ -158,8 +158,8 @@ class AttendanceRecordController extends Controller
 
         if ($user->admin_status) {
             $attendanceRecord->update([
-                'clock_in' => $request->input('new_clock_in'),
-                'clock_out' => $request->input('new_clock_out'),
+                'clock_in' => $this->toTimeString($request->input('new_clock_in')),
+                'clock_out' => $this->toTimeString($request->input('new_clock_out')),
                 'comment' => $request->input('comment'),
             ]);
 
@@ -175,8 +175,8 @@ class AttendanceRecordController extends Controller
             'user_id' => $user->id,
             'attendance_record_id' => $attendanceRecord->id,
             'new_date' => $attendanceRecord->date,
-            'new_clock_in' => $request->input('new_clock_in'),
-            'new_clock_out' => $request->input('new_clock_out'),
+            'new_clock_in' => $this->toTimeString($request->input('new_clock_in')),
+            'new_clock_out' => $this->toTimeString($request->input('new_clock_out')),
             'comment' => $request->input('comment'),
             'application_date' => Carbon::now(),
         ]);
@@ -191,8 +191,8 @@ class AttendanceRecordController extends Controller
 
                 ProposalBreak::create([
                     'application_id' => $application->id,
-                    'break_in' => $breakIn,
-                    'break_out' => $breakOut,
+                    'break_in' => $this->toTimeString($breakIn),
+                    'break_out' => $this->toTimeString($breakOut),
                 ]);
             });
 
@@ -261,10 +261,18 @@ class AttendanceRecordController extends Controller
 
             AttendanceBreak::create([
                 'attendance_record_id' => $attendanceRecord->id,
-                'break_in' => $breakIn,
-                'break_out' => $breakOut,
+                'break_in' => $this->toTimeString($breakIn),
+                'break_out' => $this->toTimeString($breakOut),
             ]);
         });
+    }
+
+    /**
+     * "H:i" 形式の入力値を、DB保存用の "H:i:s" 形式に揃える
+     */
+    private function toTimeString(?string $time): ?string
+    {
+        return $time ? Carbon::parse($time)->format('H:i:s') : null;
     }
 
     private function formatRecordForAdminDetail(AttendanceRecord $attendanceRecord): array
