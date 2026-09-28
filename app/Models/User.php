@@ -63,6 +63,14 @@ class User extends Authenticatable
     }
 
     /**
+     * このユーザーが行った申請の一覧
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class);
+    }
+
+    /**
      * 現在の勤怠ステータスを取得
      * （勤務外 / 出勤中 / 休憩中 / 退勤済）
      */

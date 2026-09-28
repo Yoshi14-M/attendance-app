@@ -113,15 +113,27 @@ class AttendanceRecordController extends Controller
     /**
      * Display the specified resource.
      * 勤怠詳細画面の表示
+     * （管理者かどうかで、表示する内容とビューを分岐）
      */
     public function show(int $id)
     {
+        $user = Auth::user();
+
+        if ($user->admin_status) {
+            $attendanceRecord = AttendanceRecord::with('user', 'breaks')->findOrFail($id);
+
+            return view('admin.admin-detail', [
+                'user' => $attendanceRecord->user,
+                'attendanceRecord' => $this->formatRecordForAdminDetail($attendanceRecord),
+            ]);
+        }
+
         $attendanceRecord = AttendanceRecord::with('breaks', 'applications')
-            ->where('user_id', Auth::id())
+            ->where('user_id', $user->id)
             ->findOrFail($id);
 
         return view('user.user-detail', [
-            'user' => Auth::user(),
+            'user' => $user,
             'data' => $this->formatRecordForDetail($attendanceRecord),
         ]);
 
@@ -253,5 +265,21 @@ class AttendanceRecordController extends Controller
                 'break_out' => $breakOut,
             ]);
         });
+    }
+
+    private function formatRecordForAdminDetail(AttendanceRecord $attendanceRecord): array
+    {
+        return [
+            'id' => $attendanceRecord->id,
+            'year' => $attendanceRecord->date->format('Y年'),
+            'date' => $attendanceRecord->date->format('n月j日'),
+            'clock_in' => $attendanceRecord->clock_in ? Carbon::parse($attendanceRecord->clock_in)->format('H:i') : '',
+            'clock_out' => $attendanceRecord->clock_out ? Carbon::parse($attendanceRecord->clock_out)->format('H:i') : '',
+            'breaks' => $attendanceRecord->breaks->map(fn (AttendanceBreak $break) => [
+                'break_in' => $break->break_in ? Carbon::parse($break->break_in)->format('H:i') : '',
+                'break_out' => $break->break_out ? Carbon::parse($break->break_out)->format('H:i') : '',
+            ])->all(),
+            'comment' => $attendanceRecord->comment,
+        ];
     }
 }
