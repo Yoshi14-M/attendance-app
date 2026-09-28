@@ -16,6 +16,7 @@ class AttendanceRecord extends Model
      * 一括代入の許可項目（ホワイトリスト）
      */
     protected $fillable = [
+        'user_id',
         'date',
         'clock_in',
         'clock_out',

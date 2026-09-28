@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\AttendanceRecordController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,4 +36,29 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // 管理者ログアウト [FN017]
         Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| 一般ユーザー用ルート
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'not.admin'])->group(function () {
+    // 打刻機能
+    Route::get('/attendance', [AttendanceRecordController::class, 'create']);
+    Route::post('/attendance', [AttendanceRecordController::class, 'store']);
+    // 勤怠一覧表示
+    Route::get('/attendance/list', [AttendanceRecordController::class, 'index']);
+    // 勤怠詳細表示
+    Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
+});
+
+/*
+|--------------------------------------------------------------------------
+| 一般ユーザー・管理者の双方からアクセスされる共通パス
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth')->group(function () {
+    // 勤怠詳細の修正・修正申請（一般ユーザーは申請、管理者は直接修正）
+    Route::post('/attendance/{id}', [AttendanceRecordController::class, 'update']);
 });
