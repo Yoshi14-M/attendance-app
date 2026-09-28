@@ -8,7 +8,7 @@
 
 - PHP 8.5
 - Laravel 10.50
-- MySQL 8.x
+- MySQL 8.4.9
 - Laravel Sail（Docker）
 - Laravel Fortify（認証）
 
@@ -95,6 +95,82 @@
 ./vendor/bin/sail pint
 ```
 
+## ER図
+
+```mermaid
+erDiagram
+    users ||--o{ attendance_records : "1人が複数日の勤怠を持つ"
+    users ||--o{ applications : "1人が複数の修正申請を出す"
+    attendance_records ||--o{ attendance_breaks : "1日の勤怠が複数の休憩を持つ"
+    attendance_records ||--o{ applications : "1日の勤怠に複数の修正申請が紐づく"
+    applications ||--o{ proposal_breaks : "1申請が複数の休憩修正案を持つ"
+
+    users {
+        bigint id PK
+        string name
+        string email UK
+        timestamp email_verified_at
+        string password
+        boolean admin_status
+        string remember_token
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    attendance_records {
+        bigint id PK
+        bigint user_id FK "UK(user_id, date)"
+        date date "UK(user_id, date)"
+        time clock_in
+        time clock_out
+        string comment
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    attendance_breaks {
+        bigint id PK
+        bigint attendance_record_id FK
+        time break_in
+        time break_out
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    applications {
+        bigint id PK
+        bigint user_id FK
+        bigint attendance_record_id FK
+        date new_date
+        time new_clock_in
+        time new_clock_out
+        string comment
+        string approval_status "承認待ち / 承認済み"
+        timestamp application_date
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    proposal_breaks {
+        bigint id PK
+        bigint application_id FK
+        time break_in
+        time break_out
+        timestamp created_at
+        timestamp updated_at
+    }
+```
+
+### テーブル概要
+| テーブル | 説明 |
+|---|---|
+| `users` | 一般ユーザー・管理者ユーザー（`admin_status` で区別） |
+| `attendance_records` | 1日1件の勤怠（出勤・退勤・備考）。`user_id` と `date` の組み合わせで一意 |
+| `attendance_breaks` | 勤怠に紐づく休憩（1日に複数回可） |
+| `applications` | 勤怠の修正申請。承認前は「承認待ち」、承認後は「承認済み」 |
+| `proposal_breaks` | 修正申請に紐づく休憩の修正案 |
+
+
 ## ディレクトリ構成の補足
 
 - `app/Http/Controllers/AttendanceRecordController.php` : 打刻・勤怠一覧・勤怠詳細表示・修正（申請/直接）を担当。一般ユーザー・管理者共通で使用
@@ -106,7 +182,7 @@
 - `app/Providers/FortifyServiceProvider.php` : ログイン処理のカスタマイズ（一般ユーザーのみ認証）
 - `lang/ja/auth.php`, `lang/ja/validation.php` : 日本語バリデーション・認証メッセージ
 
-## 実装状況（2026年時点）
+## 実装状況
 
 - 基本機能（会員登録・ログイン・打刻・勤怠一覧/詳細・修正申請・管理者機能一式）: 実装済み・テスト済み
 - 応用機能（メール認証・マイ勤怠レポート・公開API・CSV出力）: 今後実装予定
