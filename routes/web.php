@@ -52,7 +52,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 | 一般ユーザー用ルート
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'not.admin'])->group(function () {
+Route::middleware(['auth', 'not.admin', 'verified'])->group(function () {
     // 打刻機能
     Route::get('/attendance', [AttendanceRecordController::class, 'create']);
     Route::post('/attendance', [AttendanceRecordController::class, 'store']);
@@ -69,13 +69,16 @@ Route::middleware(['auth', 'not.admin'])->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-    // 勤怠詳細表示(一般ユーザーは自分の勤怠のみ、管理者は全ユーザーの勤怠を閲覧可)
-    Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
-    // 勤怠詳細の修正・修正申請（一般ユーザーは申請、管理者は直接修正）
-    Route::post('/attendance/{id}', [AttendanceRecordController::class, 'update']);
+    Route::middleware('verified')->group(function () {
+        // 勤怠詳細表示(一般ユーザーは自分の勤怠のみ、管理者は全ユーザーの勤怠を閲覧可)
+        Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
+        // 勤怠詳細の修正・修正申請（一般ユーザーは申請、管理者は直接修正）
+        Route::post('/attendance/{id}', [AttendanceRecordController::class, 'update']);
 
-    // 申請一覧（同一パスをコントローラー内で admin_status により出し分け）
-    Route::get('/stamp_correction_request/list', [ApplicationController::class, 'index']);
+        // 申請一覧（同一パスをコントローラー内で admin_status により出し分け）
+        Route::get('/stamp_correction_request/list', [ApplicationController::class, 'index']);
+    });
+
     // 修正申請承認画面（管理者のみ）
     Route::middleware('admin')->group(function () {
         Route::get('/stamp_correction_request/approve/{id}', [ApplicationController::class, 'show']);
