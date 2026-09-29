@@ -83,5 +83,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('/stamp_correction_request/approve/{id}', [ApplicationController::class, 'show']);
         Route::post('/stamp_correction_request/approve/{id}', [ApplicationController::class, 'approve']);
+        // CSV出力
+        Route::post('/export', [StaffController::class, 'export']);
     });
 });
