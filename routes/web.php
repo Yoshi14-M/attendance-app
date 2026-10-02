@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AttendanceRecordController;
+use App\Http\Controllers\AttendanceReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -58,6 +59,8 @@ Route::middleware(['auth', 'not.admin', 'verified'])->group(function () {
     Route::post('/attendance', [AttendanceRecordController::class, 'store']);
     // 勤怠一覧表示
     Route::get('/attendance/list', [AttendanceRecordController::class, 'index']);
+    // マイ勤怠レポート
+    Route::get('/attendance/report', [AttendanceReportController::class, 'index']);
 
     // 申請一覧「詳細」リンクの橋渡し（画面設計にはない補助ルート）
     Route::get('/application/{id}', [ApplicationController::class, 'redirectToAttendanceDetail']);
