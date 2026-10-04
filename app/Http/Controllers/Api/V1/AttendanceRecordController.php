@@ -77,10 +77,12 @@ class AttendanceRecordController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     * 勤怠登録を削除する（Sanctum認証必須）。
+     * 勤怠を削除する（Sanctum認証必須。本人または管理者のみ）。
      */
     public function destroy(AttendanceRecord $attendanceRecord): JsonResponse
     {
+        $this->authorize('delete', $attendanceRecord);
+
         $attendanceRecord->delete();
 
         return response()->json(null, 204);

@@ -11,10 +11,11 @@ class UpdateAttendanceRecordRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
+     * 本人または管理者のみ更新を許可する。
      */
     public function authorize(): bool
     {
-        return true;
+        return (bool) $this->user()?->can('update', $this->route('attendanceRecord'));
     }
 
     /**
