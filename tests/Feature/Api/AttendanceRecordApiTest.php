@@ -169,4 +169,76 @@ class AttendanceRecordApiTest extends TestCase
         $response->assertNoContent();
         $this->assertDatabaseMissing('attendance_records', ['id' => $record->id]);
     }
+
+    /** @test */
+    public function 部分更新では送信した項目だけが更新され未送信の項目は保持される(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $record = AttendanceRecord::factory()->for($user)->create([
+            'date' => '2026-09-01',
+            'clock_in' => '09:00:00',
+            'clock_out' => '18:00:00',
+            'comment' => '元の備考',
+        ]);
+
+        $this->patchJson("/api/v1/attendance-records/{$record->id}", ['clock_out' => '19:00:00'])
+            ->assertOk()
+            ->assertJsonPath('data.clock_out', '19:00:00');
+
+        $this->assertDatabaseHas('attendance_records', [
+            'id' => $record->id,
+            'clock_in' => '09:00:00',
+            'clock_out' => '19:00:00',
+            'comment' => '元の備考',
+        ]);
+    }
+
+    /** @test */
+    public function 退勤時刻だけの部分更新でも既存の出勤時刻より前なら422になる(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $record = AttendanceRecord::factory()->for($user)->create(['clock_in' => '09:00:00', 'clock_out' => '18:00:00']);
+
+        $this->patchJson("/api/v1/attendance-records/{$record->id}", ['clock_out' => '08:00:00'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['clock_out' => '退勤時刻は出勤時刻より後の時刻を指定してください。']);
+
+        $this->assertDatabaseHas('attendance_records', ['id' => $record->id, 'clock_out' => '18:00:00']);
+    }
+
+    /** @test */
+    public function 出勤時刻だけの部分更新でも既存の退勤時刻より後なら422になる(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $record = AttendanceRecord::factory()->for($user)->create(['clock_in' => '09:00:00', 'clock_out' => '18:00:00']);
+
+        $this->patchJson("/api/v1/attendance-records/{$record->id}", ['clock_in' => '19:00:00'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['clock_out' => '退勤時刻は出勤時刻より後の時刻を指定してください。']);
+    }
+
+    /** @test */
+    public function 更新時の日付重複は自身を除いて判定される(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        $record = AttendanceRecord::factory()->for($user)->create(['date' => '2026-09-01']);
+        AttendanceRecord::factory()->for($user)->create(['date' => '2026-09-02']);
+
+        $this->patchJson("/api/v1/attendance-records/{$record->id}", ['date' => '2026-09-01'])->assertOk();
+        $this->patchJson("/api/v1/attendance-records/{$record->id}", ['date' => '2026-09-02'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['date' => 'この日付の勤怠は既に登録されています。']);
+    }
+
+    /** @test */
+    public function acceptヘッダが無くても未認証の書き込みは401のjsonが返る(): void
+    {
+        $this->post('/api/v1/attendance-records', [])
+            ->assertUnauthorized()
+            ->assertExactJson(['message' => 'Unauthenticated.']);
+    }
 }

@@ -2,116 +2,103 @@
 
 namespace Database\Seeders;
 
-use App\Models\AttendanceBreak;
 use App\Models\AttendanceRecord;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 
 class AttendanceRecordSeeder extends Seeder
 {
+    /** 通常勤務（9:00-18:00） */
+    private const NORMAL = ['09:00:00', '18:00:00'];
+
+    /** 固定休憩（12:00-13:00） */
+    private const LUNCH_BREAK = ['12:00:00', '13:00:00'];
+
     /**
      * Run the database seeds.
+     * 全ユーザー（一般・管理者）に勤怠と休憩のダミーデータを作成する。
      */
     public function run(): void
     {
-        // 勤怠記録情報のダミーデータ
-        $user1 = User::where('email', 'user1@example.com')->firstOrFail();
-        $user2 = User::where('email', 'user2@example.com')->firstOrFail();
+        $this->seedUser1(User::where('email', 'user1@example.com')->firstOrFail());
 
-        $this->seedUser1($user1);
-        $this->seedUser2($user2);
+        // user1 以外は、過去5ヶ月＋当月に平日の通常勤務を作成する
+        User::where('email', '!=', 'user1@example.com')
+            ->get()
+            ->each(fn (User $user) => $this->seedRegularUser($user));
     }
 
     /**
      * ★ 応用機能（マイ勤怠レポート）検証用に、意図的なパターンを持つダミーデータを作成する
+     * 過去5ヶ月: 各月平日15日の通常勤務 / 当月: 通常10・残業3・遅刻2・早退1・長時間労働1 = 17日
      */
     private function seedUser1(User $user): void
     {
-        // 過去5ヶ月：各月 平日15日、9:00-18:00、休憩12:00-13:00固定
-        for ($monthsAgo = 5; $monthsAgo >= 1; $monthsAgo--) {
-            $month = Carbon::now()->subMonths($monthsAgo)->startOfMonth();
-            $weekdays = $this->weekdaysOfMonth($month, 15);
+        collect(range(5, 1))
+            ->flatMap(fn (int $monthsAgo) => $this->weekdaysOfMonth(Carbon::now()->startOfMonth()->subMonths($monthsAgo), 15))
+            ->each(fn (Carbon $day) => $this->createRecord($user, $day, self::NORMAL));
 
-            foreach ($weekdays as $day) {
-                $this->createRecord($user, $day, '09:00:00', '18:00:00', [['12:00:00', '13:00:00']]);
-            }
-        }
+        $patterns = collect()
+            ->pad(10, self::NORMAL)
+            ->merge(array_fill(0, 3, ['09:00:00', '20:00:00']))
+            ->merge(array_fill(0, 2, ['09:30:00', '18:00:00']))
+            ->merge([['09:00:00', '17:00:00']])
+            ->merge([['08:00:00', '21:00:00']]);
 
-        // 当月：通常10 / 残業3 / 遅刻2 / 早退1 / 長時間労働1 = 計17日
-        $currentMonth = Carbon::now()->startOfMonth();
-        $weekdays = $this->weekdaysOfMonth($currentMonth, 17);
-        $patterns = array_merge(
-            array_fill(0, 10, ['09:00:00', '18:00:00']),
-            array_fill(0, 3, ['09:00:00', '20:00:00']),
-            array_fill(0, 2, ['09:30:00', '18:00:00']),
-            array_fill(0, 1, ['09:00:00', '17:00:00']),
-            array_fill(0, 1, ['08:00:00', '21:00:00']),
-        );
-
-        foreach ($weekdays as $index => $day) {
-            [$clockIn, $clockOut] = $patterns[$index];
-            $this->createRecord($user, $day, $clockIn, $clockOut, [['12:00:00', '13:00:00']]);
-        }
+        $this->weekdaysOfMonth(Carbon::now(), $patterns->count())
+            ->each(fn (Carbon $day, int $index) => $this->createRecord($user, $day, $patterns[$index]));
     }
 
     /**
-     * 一般的な打刻データ（比較用のもう一人のユーザー）
+     * 一般的な打刻データ
+     * （過去5ヶ月は各月平日15日、当月は昨日までの平日から最大10日の通常勤務）
      */
-    private function seedUser2(User $user): void
+    private function seedRegularUser(User $user): void
     {
-        $currentMonth = Carbon::now()->startOfMonth();
-        $weekdays = $this->weekdaysOfMonth($currentMonth, 12);
-
-        foreach ($weekdays as $day) {
-            $this->createRecord($user, $day, '09:00:00', '18:00:00', [['12:00:00', '13:00:00']]);
-        }
+        collect(range(5, 1))
+            ->flatMap(fn (int $monthsAgo) => $this->weekdaysOfMonth(Carbon::now()->startOfMonth()->subMonths($monthsAgo), 15))
+            ->merge($this->weekdaysOfMonth(Carbon::now(), 10)->filter(fn (Carbon $day) => $day->isPast()))
+            ->each(fn (Carbon $day) => $this->createRecord($user, $day, self::NORMAL));
     }
 
     /**
-     * 指定した月の平日を先頭から指定件数だけ取得する
-     * ある月の1日から末日（または昨日、早い方）までを1日ずつ確認し、
-     * 土日を除いた平日を、指定件数集まるまで拾い集める。
+     * 指定した月の平日を、1日から順に指定件数だけ取得する。
+     * 当日は打刻の動作確認ができるよう除外する（当月は当日以降の日付も含めて件数を揃える）。
      *
-     * @return array<int, Carbon>
+     * @return Collection<int, Carbon>
      */
-    private function weekdaysOfMonth(Carbon $month, int $count): array
+    private function weekdaysOfMonth(Carbon $month, int $count): Collection
     {
-        $days = [];
-        $cursor = $month->copy()->startOfMonth();
-        $end = $month->copy()->endOfMonth()->min(Carbon::yesterday());
+        $start = $month->copy()->startOfMonth();
 
-        while ($cursor->lte($end) && count($days) < $count) {
-            if (! $cursor->isWeekend()) {
-                $days[] = $cursor->copy();
-            }
-            $cursor->addDay();
-        }
-
-        return $days;
+        return collect(range(0, $start->daysInMonth - 1))
+            ->map(fn (int $offset) => $start->copy()->addDays($offset))
+            ->reject(fn (Carbon $day) => $day->isWeekend() || $day->isToday())
+            ->take($count)
+            ->values();
     }
 
     /**
      * 指定したユーザー・日付・出退勤時刻で勤怠レコードを作成（既にあれば上書き）し、
-     * 紐づく休憩レコードは一旦全部削除してから、引数で渡された休憩時間の分だけ作り直す。
+     * 紐づく休憩レコードは固定休憩1件で作り直す。
      *
-     * @param  array<int, array{0: string, 1: string}>  $breaks
+     * @param  array{0: string, 1: string}  $clockTimes  [出勤時刻, 退勤時刻]
      */
-    private function createRecord(User $user, Carbon $date, string $clockIn, string $clockOut, array $breaks): void
+    private function createRecord(User $user, Carbon $date, array $clockTimes): void
     {
+        [$clockIn, $clockOut] = $clockTimes;
+
         $record = AttendanceRecord::updateOrCreate(
             ['user_id' => $user->id, 'date' => $date->toDateString()],
             ['clock_in' => $clockIn, 'clock_out' => $clockOut]
         );
 
         $record->breaks()->delete();
-
-        foreach ($breaks as [$breakIn, $breakOut]) {
-            AttendanceBreak::create([
-                'attendance_record_id' => $record->id,
-                'break_in' => $breakIn,
-                'break_out' => $breakOut,
-            ]);
-        }
+        $record->breaks()->create([
+            'break_in' => self::LUNCH_BREAK[0],
+            'break_out' => self::LUNCH_BREAK[1],
+        ]);
     }
 }

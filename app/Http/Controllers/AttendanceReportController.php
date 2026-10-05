@@ -6,6 +6,7 @@ use App\Models\AttendanceRecord;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class AttendanceReportController extends Controller
 {
@@ -25,17 +26,17 @@ class AttendanceReportController extends Controller
 
     /**
      * マイ勤怠レポート画面を表示する。
+     * 集計期間は「5ヶ月前の1日 〜 当月末日」。当月は月内発生回数として月末までを対象にする。
      */
-    public function index()
+    public function index(): View
     {
-        $today = Carbon::today();
-        $thisMonth = $today->copy()->startOfMonth();
+        $thisMonth = Carbon::today()->startOfMonth();
         $from = $thisMonth->copy()->subMonths(self::REPORT_MONTHS - 1);
 
         $records = Auth::user()->attendanceRecords()
             ->with('breaks')
             ->whereDate('date', '>=', $from)
-            ->whereDate('date', '<=', $today)
+            ->whereDate('date', '<=', $thisMonth->copy()->endOfMonth())
             ->get();
 
         // 出勤・退勤が揃っている日だけを、労働時間の集計対象にする
