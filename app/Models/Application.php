@@ -62,7 +62,7 @@ class Application extends Model
     /**
      * 申請出勤時間を取得
      */
-    public function getNewClockInAttribute($value): ?string
+    public function getNewClockInAttribute(?string $value): ?string
     {
         return $value ? Carbon::parse($value)->format('H:i') : null;
     }
@@ -70,7 +70,7 @@ class Application extends Model
     /**
      * 申請退勤時間を取得
      */
-    public function getNewClockOutAttribute($value): ?string
+    public function getNewClockOutAttribute(?string $value): ?string
     {
         return $value ? Carbon::parse($value)->format('H:i') : null;
     }

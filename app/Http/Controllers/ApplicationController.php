@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Application;
-use App\Models\AttendanceBreak;
-use Illuminate\Http\Request;
+use App\Models\ProposalBreak;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class ApplicationController extends Controller
 {
@@ -13,7 +15,7 @@ class ApplicationController extends Controller
      * Display a listing of the resource.
      * 申請一覧画面の表示（一般ユーザー・管理者共通のパス）
      */
-    public function index()
+    public function index(): View
     {
         $user = Auth::user();
 
@@ -46,26 +48,10 @@ class ApplicationController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
      * Display the specified resource.
      * 修正申請承認画面の表示（管理者専用）
      */
-    public function show(int $id)
+    public function show(int $id): View
     {
         $application = Application::with('user', 'AttendanceRecord', 'proposalBreaks')->findOrFail($id);
 
@@ -76,54 +62,33 @@ class ApplicationController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Application $application)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Application $application)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Application $application)
-    {
-        //
-    }
-
-    /**
      * 修正申請を承認し、勤怠情報へ反映する（管理者専用）
      */
-    public function approve(int $id)
+    public function approve(int $id): RedirectResponse
     {
-        $application = Application::with('proposalBreaks')->findOrFail($id);
+        $application = Application::with('AttendanceRecord', 'proposalBreaks')->findOrFail($id);
 
         if ($application->approval_status === '承認待ち') {
-            $attendanceRecord = $application->AttendanceRecord;
+            DB::transaction(function () use ($application): void {
+                $attendanceRecord = $application->AttendanceRecord;
 
-            $attendanceRecord->update([
-                'clock_in' => $application->getRawOriginal('new_clock_in'),
-                'clock_out' => $application->getRawOriginal('new_clock_out'),
-                'comment' => $application->comment,
-            ]);
+                $attendanceRecord->update([
+                    'clock_in' => $application->getRawOriginal('new_clock_in'),
+                    'clock_out' => $application->getRawOriginal('new_clock_out'),
+                    'comment' => $application->comment,
+                ]);
 
-            $attendanceRecord->breaks()->delete();
+                $attendanceRecord->breaks()->delete();
 
-            $application->proposalBreaks->each(fn ($break) => AttendanceBreak::create([
-                'attendance_record_id' => $attendanceRecord->id,
-                'break_in' => $break->break_in,
-                'break_out' => $break->break_out,
-            ]));
+                $application->proposalBreaks
+                    ->filter(fn (ProposalBreak $break) => $break->break_in !== null)
+                    ->each(fn (ProposalBreak $break) => $attendanceRecord->breaks()->create([
+                        'break_in' => $break->break_in,
+                        'break_out' => $break->break_out,
+                    ]));
 
-            $application->update(['approval_status' => '承認済み']);
+                $application->update(['approval_status' => '承認済み']);
+            });
         }
 
         return redirect('/stamp_correction_request/list');
@@ -132,7 +97,7 @@ class ApplicationController extends Controller
     /**
      * 一般ユーザーの申請一覧「詳細」リンクを、対応する勤怠詳細画面へ橋渡しする
      */
-    public function redirectToAttendanceDetail(int $id)
+    public function redirectToAttendanceDetail(int $id): RedirectResponse
     {
         $application = Application::where('user_id', Auth::id())->findOrFail($id);
 

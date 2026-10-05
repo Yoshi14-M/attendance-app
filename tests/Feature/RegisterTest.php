@@ -22,7 +22,7 @@ class RegisterTest extends TestCase
     }
 
     /** @test */
-    public function test_email_required(): void
+    public function メールアドレスが空白の場合バリデーションエラー(): void
     {
         $response = $this->post('/register', [
             'name' => '山田太郎',
@@ -57,6 +57,17 @@ class RegisterTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors(['password' => 'パスワードと一致しません']);
+    }
+
+    /** @test */
+    public function パスワードが空白の場合バリデーションエラー(): void
+    {
+        $response = $this->post('/register', [
+            'name' => '山田太郎',
+            'email' => 'taro@example.com',
+        ]);
+
+        $response->assertSessionHasErrors(['password' => 'パスワードを入力してください']);
     }
 
     /** @test */

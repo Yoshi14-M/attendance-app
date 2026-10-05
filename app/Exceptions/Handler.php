@@ -52,4 +52,13 @@ class Handler extends ExceptionHandler
             return null;
         });
     }
+
+    /**
+     * api/* へのリクエストは Accept ヘッダに関係なく JSON で返す。
+     * （未認証401・バリデーション422 が /login へのリダイレクトにならないようにする）
+     */
+    protected function shouldReturnJson($request, Throwable $e): bool
+    {
+        return $request->is('api/*') || parent::shouldReturnJson($request, $e);
+    }
 }

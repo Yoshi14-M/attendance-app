@@ -35,6 +35,9 @@ class UpdateAttendanceRequest extends FormRequest
         ];
     }
 
+    /**
+     * カスタムエラーメッセージ
+     */
     public function messages(): array
     {
         return [
@@ -44,39 +47,59 @@ class UpdateAttendanceRequest extends FormRequest
 
     /**
      * 出勤・退勤・休憩の時系列に矛盾がないかを検証する
+     * （形式エラーがある場合は時系列の検証を行わない）
      */
     public function withValidator(ValidatorContract $validator): void
     {
         $validator->after(function (ValidatorContract $validator) {
-            $clockIn = $this->input('new_clock_in');
-            $clockOut = $this->input('new_clock_out');
+            $hasTimeFormatError = collect($validator->errors()->keys())
+                ->contains(fn (string $key) => str_starts_with($key, 'new_'));
 
-            if ($clockIn && $clockOut && Carbon::parse($clockOut)->lt(Carbon::parse($clockIn))) {
+            if ($hasTimeFormatError) {
+                return;
+            }
+
+            $clockIn = $this->toCarbon($this->input('new_clock_in'));
+            $clockOut = $this->toCarbon($this->input('new_clock_out'));
+
+            if ($clockIn && $clockOut && $clockOut->lt($clockIn)) {
                 $validator->errors()->add('new_clock_in', '出勤時間もしくは退勤時間が不適切な値です');
             }
 
-            $breakIns = $this->input('new_break_in', []);
             $breakOuts = $this->input('new_break_out', []);
 
-            foreach ($breakIns as $index => $breakIn) {
-                $breakOut = $breakOuts[$index] ?? null;
+            collect($this->input('new_break_in', []))
+                ->map(fn (?string $breakIn, int $index) => [
+                    'index' => $index,
+                    'in' => $this->toCarbon($breakIn),
+                    'out' => $this->toCarbon($breakOuts[$index] ?? null),
+                ])
+                ->reject(fn (array $break) => $break['in'] === null && $break['out'] === null)
+                ->each(function (array $break) use ($validator, $clockIn, $clockOut) {
+                    $index = $break['index'];
 
-                if (! $breakIn && ! $breakOut) {
-                    continue;
-                }
+                    // 休憩開始が未入力、出勤前・退勤後、または休憩終了より後
+                    if (
+                        $break['in'] === null
+                        || ($clockIn && $break['in']->lt($clockIn))
+                        || ($clockOut && $break['in']->gt($clockOut))
+                        || ($break['out'] && $break['in']->gt($break['out']))
+                    ) {
+                        $validator->errors()->add("new_break_in.$index", '休憩時間が不適切な値です');
+                    }
 
-                if ($breakIn && $clockIn && Carbon::parse($breakIn)->lt(Carbon::parse($clockIn))) {
-                    $validator->errors()->add("new_break_in.$index", '休憩時間が不適切な値です');
-                }
-
-                if ($breakIn && $clockOut && Carbon::parse($breakIn)->gt(Carbon::parse($clockOut))) {
-                    $validator->errors()->add("new_break_in.$index", '休憩時間が不適切な値です');
-                }
-
-                if ($breakOut && $clockOut && Carbon::parse($breakOut)->gt(Carbon::parse($clockOut))) {
-                    $validator->errors()->add("new_break_out.$index", '休憩時間もしくは退勤時間が不適切な値です');
-                }
-            }
+                    if ($break['out'] && $clockOut && $break['out']->gt($clockOut)) {
+                        $validator->errors()->add("new_break_out.$index", '休憩時間もしくは退勤時間が不適切な値です');
+                    }
+                });
         });
+    }
+
+    /**
+     * "H:i" 形式の入力値を Carbon に変換する（未入力は null）
+     */
+    private function toCarbon(?string $time): ?Carbon
+    {
+        return $time ? Carbon::parse($time) : null;
     }
 }

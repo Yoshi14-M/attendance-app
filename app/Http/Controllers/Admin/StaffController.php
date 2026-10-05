@@ -7,6 +7,7 @@ use App\Models\AttendanceRecord;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StaffController extends Controller
@@ -14,7 +15,7 @@ class StaffController extends Controller
     /**
      * スタッフ一覧画面の表示
      */
-    public function index()
+    public function index(): View
     {
         return view('admin.staff-list', [
             'users' => User::where('admin_status', false)->get(),
@@ -24,7 +25,7 @@ class StaffController extends Controller
     /**
      * スタッフ別の月次勤怠一覧画面の表示
      */
-    public function show(Request $request, int $id)
+    public function show(Request $request, int $id): View
     {
         $user = User::findOrFail($id);
         $date = Carbon::parse($request->query('date', Carbon::now()->format('Y-m')).'-01');

@@ -12,6 +12,40 @@ class AdminLoginTest extends TestCase
     use RefreshDatabase;
 
     /** @test */
+    public function メールアドレスが空白の場合バリデーションエラー(): void
+    {
+        $response = $this->post('/admin/login', ['password' => 'password']);
+
+        $response->assertSessionHasErrors(['email' => 'メールアドレスを入力してください']);
+    }
+
+    /** @test */
+    public function パスワードが空白の場合バリデーションエラー(): void
+    {
+        $response = $this->post('/admin/login', ['email' => 'admin@example.com']);
+
+        $response->assertSessionHasErrors(['password' => 'パスワードを入力してください']);
+    }
+
+    /** @test */
+    public function 登録されていないメールアドレスではログインできない(): void
+    {
+        User::factory()->create([
+            'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
+            'admin_status' => true,
+        ]);
+
+        $response = $this->post('/admin/login', [
+            'email' => 'wrong@example.com',
+            'password' => 'password',
+        ]);
+
+        $response->assertSessionHasErrors(['email' => 'ログイン情報が登録されていません']);
+        $this->assertGuest();
+    }
+
+    /** @test */
     public function 一般ユーザーは管理者ログインができない(): void
     {
         User::factory()->create([
@@ -44,5 +78,16 @@ class AdminLoginTest extends TestCase
 
         $response->assertRedirect('/admin/attendance/list');
         $this->assertAuthenticated();
+    }
+
+    /** @test */
+    public function 管理者がログアウトすると管理者ログイン画面へ遷移する(): void
+    {
+        $admin = User::factory()->create(['admin_status' => true]);
+
+        $response = $this->actingAs($admin)->post('/admin/logout');
+
+        $response->assertRedirect('/admin/login');
+        $this->assertGuest();
     }
 }

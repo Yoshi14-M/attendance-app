@@ -15,7 +15,7 @@ class AttendanceRecordController extends Controller
 {
     /**
      * Display a listing of the resource.
-     * 勤怠一覧画面の表示（一般ユーザー）
+     * 勤怠一覧の取得（認証不要）
      */
     public function index(IndexAttendanceRecordRequest $request): AnonymousResourceCollection
     {
@@ -38,8 +38,8 @@ class AttendanceRecordController extends Controller
 
     /**
      * Store a newly created resource in storage.
-     * 勤怠登録（DBへの保存）
-     * （Sanctum認証必須。認証ユーザー自身のレコードとして作成する）
+     * 勤怠登録（Sanctum認証必須）
+     * （認証ユーザー自身のレコードとして作成する）
      */
     public function store(StoreAttendanceRecordRequest $request): JsonResponse
     {
@@ -53,8 +53,8 @@ class AttendanceRecordController extends Controller
 
     /**
      * Display the specified resource.
-     * 勤怠詳細画面の表示
-     * （ユーザー。休憩・修正申請を含む）
+     * 勤怠詳細の習得（認証不要）
+     * （ユーザー・休憩・修正申請を含めて返す）
      */
     public function show(AttendanceRecord $attendanceRecord): AttendanceRecordResource
     {
@@ -65,7 +65,9 @@ class AttendanceRecordController extends Controller
 
     /**
      * Update the specified resource in storage.
-     * 勤怠修正（Sanctum認証必須）
+     * 勤怠更新する（Sanctum認証必須）
+     * 本人または管理者かどうかの認可は UpdateAttendanceRecordRequest::authorize() で
+     * バリデーションより先に行う（他ユーザーの勤怠には422ではなく403を返すため）。
      */
     public function update(UpdateAttendanceRecordRequest $request, AttendanceRecord $attendanceRecord): AttendanceRecordResource
     {

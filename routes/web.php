@@ -7,6 +7,7 @@ use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\AttendanceRecordController;
 use App\Http\Controllers\AttendanceReportController;
 use Illuminate\Support\Facades\Route;
+use Laravel\Fortify\Http\Controllers\AuthenticatedSessionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,14 +32,15 @@ Route::get('/', function () {
 Route::prefix('admin')->name('admin.')->group(function () {
     // 管理者 ゲスト専用ルート (ログイン前)
     Route::middleware('guest')->group(function () {
-        Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
-        Route::post('/login', [AdminAuthController::class, 'login']);
+        Route::get('/login', [AdminAuthController::class, 'create'])->name('login');
+        // 認証処理は Fortify に委ねる（管理者判定は FortifyServiceProvider::authenticateUsing）
+        Route::post('/login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:login');
     });
 
     // 管理者 認証必須ルート (ログイン後)
     Route::middleware(['auth', 'admin'])->group(function () {
-        // 管理者ログアウト [FN017]
-        Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+        // 管理者ログアウト（Fortify）
+        Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
         // 勤怠一覧表示
         Route::get('/attendance/list', [AdminAttendanceController::class, 'index']);
         // スタッフ一覧表示
@@ -74,9 +76,9 @@ Route::middleware(['auth', 'not.admin', 'verified'])->group(function () {
 Route::middleware('auth')->group(function () {
     Route::middleware('verified')->group(function () {
         // 勤怠詳細表示(一般ユーザーは自分の勤怠のみ、管理者は全ユーザーの勤怠を閲覧可)
-        Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show']);
+        Route::get('/attendance/{id}', [AttendanceRecordController::class, 'show'])->whereNumber('id');
         // 勤怠詳細の修正・修正申請（一般ユーザーは申請、管理者は直接修正）
-        Route::post('/attendance/{id}', [AttendanceRecordController::class, 'update']);
+        Route::post('/attendance/{id}', [AttendanceRecordController::class, 'update'])->whereNumber('id');
 
         // 申請一覧（同一パスをコントローラー内で admin_status により出し分け）
         Route::get('/stamp_correction_request/list', [ApplicationController::class, 'index']);

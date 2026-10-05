@@ -17,7 +17,7 @@ class AttendanceRecordApiAuthorizationTest extends TestCase
     private const FORBIDDEN = ['error' => 'この操作を実行する権限がありません。'];
 
     /** @test */
-    public function 未認証の書き込みは401の_jso_nが返る(): void
+    public function 未認証の書き込みは401のjsonが返る(): void
     {
         $this->postJson('/api/v1/attendance-records', [])
             ->assertUnauthorized()
@@ -25,7 +25,7 @@ class AttendanceRecordApiAuthorizationTest extends TestCase
     }
 
     /** @test */
-    public function 存在しない_i_dの詳細取得は404の_jso_nが返る(): void
+    public function 存在しないidの詳細取得は404のjsonが返る(): void
     {
         $this->getJson('/api/v1/attendance-records/99999')
             ->assertNotFound()
@@ -33,7 +33,7 @@ class AttendanceRecordApiAuthorizationTest extends TestCase
     }
 
     /** @test */
-    public function 存在しない_i_dの更新は404の_jso_nが返る(): void
+    public function 存在しないidの更新は404のjsonが返る(): void
     {
         Sanctum::actingAs(User::factory()->create());
 
@@ -43,7 +43,7 @@ class AttendanceRecordApiAuthorizationTest extends TestCase
     }
 
     /** @test */
-    public function 存在しない_i_dの削除は404の_jso_nが返る(): void
+    public function 存在しないidの削除は404のjsonが返る(): void
     {
         Sanctum::actingAs(User::factory()->create());
 
@@ -53,7 +53,7 @@ class AttendanceRecordApiAuthorizationTest extends TestCase
     }
 
     /** @test */
-    public function 他ユーザーの勤怠は更新できず403の_jso_nが返る(): void
+    public function 他ユーザーの勤怠は更新できず403のjsonが返る(): void
     {
         $owner = User::factory()->create();
         $record = AttendanceRecord::factory()->for($owner)->create(['clock_out' => '18:00:00']);
@@ -77,7 +77,7 @@ class AttendanceRecordApiAuthorizationTest extends TestCase
     }
 
     /** @test */
-    public function 他ユーザーの勤怠は削除できず403の_jso_nが返る(): void
+    public function 他ユーザーの勤怠は削除できず403のjsonが返る(): void
     {
         $record = AttendanceRecord::factory()->create();
         Sanctum::actingAs(User::factory()->create());

@@ -55,14 +55,6 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * このユーザーの修正申請一覧（１対多）
-     */
-    public function breaks(): HasMany
-    {
-        return $this->hasMany(AttendanceBreak::class);
-    }
-
-    /**
      * このユーザーが行った申請の一覧
      */
     public function applications(): HasMany

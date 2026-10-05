@@ -12,7 +12,7 @@ class CsvExportTest extends TestCase
     use RefreshDatabase;
 
     /** @test */
-    public function 管理者は_cs_vをダウンロードできる(): void
+    public function 管理者はcsvをダウンロードできる(): void
     {
         $admin = User::factory()->create(['admin_status' => true]);
         $user = User::factory()->create();
@@ -38,7 +38,7 @@ class CsvExportTest extends TestCase
     }
 
     /** @test */
-    public function 一般ユーザーは_cs_v出力にアクセスできない(): void
+    public function 一般ユーザーはcsv出力にアクセスできない(): void
     {
         $user = User::factory()->create();
 
@@ -51,7 +51,7 @@ class CsvExportTest extends TestCase
     }
 
     /** @test */
-    public function 存在しないユーザー_i_dはバリデーションエラーになる(): void
+    public function 存在しないユーザーidはバリデーションエラーになる(): void
     {
         $admin = User::factory()->create(['admin_status' => true]);
 
