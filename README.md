@@ -18,8 +18,8 @@
 1. リポジトリを取得する
 
 ```bash
-   git clone <このリポジトリのURL>
-   cd <プロジェクトディレクトリ>
+   git clone git@github.com:Yoshi14-M/attendance-app.git
+   cd attendance-app
 ```
 
 2. `.env.example` を `.env` にコピーする
